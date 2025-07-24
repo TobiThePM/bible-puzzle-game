@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible Stories Puzzle</title>
+    <!-- Tailwind CSS CDN for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for the puzzle pieces and overall layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            /* Light gray background */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            /* Full viewport height */
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .puzzle-container {
+            display: grid;
+            gap: 2px;
+            /* Small gap between puzzle pieces */
+            border: 5px solid #4a90e2;
+            /* Blue border around the puzzle */
+            border-radius: 10px;
+            /* Rounded corners for the puzzle container */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            /* Soft shadow */
+            background-color: #fff;
+            /* White background for the container */
+            padding: 5px;
+            width: 600px;
+            /* Fixed width for better control */
+            height: 600px;
+            /* Fixed height for better control */
+        }
+
+        .puzzle-piece {
+            background-size: 300% 300%;
+            /* Scale for 3x3 grid */
+            background-repeat: no-repeat;
+            cursor: grab;
+            /* Indicate draggable */
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            /* Subtle border for each piece */
+            box-sizing: border-box;
+            transition: transform 0.1s ease-in-out;
+            /* Smooth transition for dragging */
+            border-radius: 5px;
+            /* Rounded corners for pieces */
+            min-height: 190px;
+            /* Ensure minimum size */
+            min-width: 190px;
+        }
+
+        .puzzle-piece.dragging {
+            opacity: 0.7;
+            /* Make dragged piece slightly transparent */
+            transform: scale(1.05);
+            /* Slightly enlarge when dragging */
+        }
+
+        .puzzle-piece.correct {
+            border: 2px solid #28a745;
+            /* Green border for correctly placed pieces */
+        }
+
+        .message-box {
+            background-color: #4CAF50;
+            /* Green background */
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: none;
+            /* Hidden by default */
+            margin-top: 20px;
+            margin-bottom: 20px;
+            width: fit-content;
+            max-width: 80vw;
+        }
+
+        .message-box.error {
+            background-color: #dc3545;
+            /* Red background for errors */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .puzzle-container {
+                width: 90vw;
+                height: 90vw;
+                max-width: 500px;
+                max-height: 500px;
+            }
+
+            .puzzle-piece {
+                min-height: auto;
+                min-width: auto;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message-box {
+                font-size: 1.2rem;
+                padding: 10px 20px;
+                margin-top: 15px;
+                margin-bottom: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .puzzle-container {
+                width: 95vw;
+                height: 95vw;
+                max-width: 400px;
+                max-height: 400px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Button styling */
+        .game-button {
+            background-image: linear-gradient(to right, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 30px;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            outline: none;
+        }
+
+        .game-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            background-image: linear-gradient(to right, #2575fc 0%, #6a11cb 100%);
+        }
+
+        .game-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            z-index: 2000;
+        }
+
+        .spinner {
+            border: 8px solid #f3f3f3;
+            /* Light grey */
+            border-top: 8px solid #3498db;
+            /* Blue */
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1 class="text-4xl font-extrabold text-gray-800 mb-6 text-center" id="puzzle-title">Bible Stories Puzzle</h1>
+
+    <div id="puzzle-container" class="puzzle-container">
+        <!-- Puzzle pieces will be dynamically added here by JavaScript -->
+    </div>
+
+    <!-- Message box moved to appear below the puzzle container -->
+    <div id="message-box" class="message-box">
+        Congratulations! You solved the puzzle!
+    </div>
+
+    <button id="reset-button" class="game-button">New Puzzle</button>
+
+    <div id="loading-overlay" class="loading-overlay" style="display: flex;">
+        <div class="spinner"></div>
+        <span>Loading puzzle... Please wait!</span>
+    </div>
+
+    <script>
+        // JavaScript for the puzzle game logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const puzzleContainer = document.getElementById('puzzle-container');
+            const resetButton = document.getElementById('reset-button');
+            const messageBox = document.getElementById('message-box');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const puzzleTitle = document.getElementById('puzzle-title');
+
+            let imageUrl = ''; // This will be set after image selection
+            const rows = 3; // Number of rows for the puzzle
+            const cols = 3; // Number of columns for the puzzle
+            const totalPieces = rows * cols;
+            let pieces = []; // Array to hold puzzle piece elements
+            let currentDraggedPiece = null; // To store the piece being dragged
+
+            // Array of your image URLs
+            const imageUrls = [
+                "https://res.cloudinary.com/dggeuuu1n/image/upload/v1753139844/Image_fx_28_kbgaoo.png",
+                "https://res.cloudinary.com/dggeuuu1n/image/upload/v1753139826/Image_fx_21_gk3kgb.png",
+                "https://res.cloudinary.com/dggeuuu1n/image/upload/v1753139816/Image_fx_19_m9xlj0.png",
+                "https://res.cloudinary.com/dggeuuu1n/image/upload/v1753139781/Image_fx_23_c5o5rm.png",
+                "https://res.cloudinary.com/dggeuuu1n/image/upload/v1753139719/Image_fx_27_l7kd3r.png",
+                "https://res.cloudinary.com/dggeuuu1n/image/upload/v1753139678/Image_fx_22_mlhzrf.png"
+            ];
+
+            // Optional: Array of titles corresponding to each image
+            const imageTitles = [
+                "Bible Stories Puzzle 1",
+                "Bible Stories Puzzle 2",
+                "Bible Stories Puzzle 3",
+                "Bible Stories Puzzle 4",
+                "Bible Stories Puzzle 5",
+                "Bible Stories Puzzle 6"
+            ];
+
+            // Function to display a message to the user
+            function showMessage(message, isError = false) {
+                messageBox.textContent = message;
+                messageBox.classList.remove('correct', 'error'); // Clear previous states
+                if (isError) {
+                    messageBox.classList.add('error');
+                } else {
+                    messageBox.classList.add('correct');
+                }
+                messageBox.style.display = 'block';
+            }
+
+            // Function to preload an image and return a promise
+            function preloadImage(src) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+                    img.src = src;
+                });
+            }
+
+            // Function to select a random image from your collection
+            async function generateImage() {
+                loadingOverlay.style.display = 'flex'; // Show loading overlay
+                messageBox.style.display = 'none'; // Hide any previous messages
+
+                try {
+                    // Select a random image from your array
+                    const randomIndex = Math.floor(Math.random() * imageUrls.length);
+                    const selectedImageUrl = imageUrls[randomIndex];
+
+                    // Update title
+                    puzzleTitle.textContent = imageTitles[randomIndex];
+
+                    console.log('Loading image:', selectedImageUrl); // Debug log
+
+                    // Preload the image to ensure it's fully loaded before creating puzzle
+                    await preloadImage(selectedImageUrl);
+
+                    imageUrl = selectedImageUrl;
+                    console.log('Image loaded successfully'); // Debug log
+
+                    initializePuzzle(); // Initialize puzzle with the loaded image
+
+                } catch (error) {
+                    console.error('Error loading image:', error);
+                    showMessage(`Error loading image: ${error.message}`, true);
+                } finally {
+                    loadingOverlay.style.display = 'none'; // Hide loading overlay
+                }
+            }
+
+            // Function to initialize the puzzle
+            function initializePuzzle() {
+                puzzleContainer.innerHTML = ''; // Clear any existing pieces
+                pieces = []; // Clear the pieces array
+
+                // Set grid template columns and rows dynamically
+                puzzleContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+                puzzleContainer.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+                console.log('Creating puzzle pieces...'); // Debug log
+
+                // Create puzzle pieces
+                for (let i = 0; i < totalPieces; i++) {
+                    const piece = document.createElement('div');
+                    piece.classList.add('puzzle-piece');
+                    piece.setAttribute('draggable', 'true'); // Make pieces draggable
+                    piece.dataset.originalIndex = i; // Store original index for checking win condition
+
+                    // Calculate background position for each piece (FIXED FORMULA)
+                    const row = Math.floor(i / cols);
+                    const col = i % cols;
+
+                    // For a 3x3 grid, we want positions at 0%, 50%, 100%
+                    const backgroundX = col * 50;  // 0, 50, 100
+                    const backgroundY = row * 50;  // 0, 50, 100
+
+                    piece.style.backgroundImage = `url(${imageUrl})`;
+                    piece.style.backgroundPosition = `${backgroundX}% ${backgroundY}%`;
+                    piece.style.backgroundSize = `300% 300%`; // 3 times bigger to show 1/3 of image
+
+                    console.log(`Piece ${i}: row=${row}, col=${col}, x=${backgroundX}%, y=${backgroundY}%`); // Debug
+
+                    pieces.push(piece);
+                    puzzleContainer.appendChild(piece); // Add to container immediately
+                }
+
+                console.log('All pieces created, shuffling...'); // Debug log
+                shufflePieces();
+                addEventListenersToPieces();
+            }
+
+            // Function to shuffle the puzzle pieces
+            function shufflePieces() {
+                // Convert pieces to array for shuffling
+                const piecesArray = Array.from(puzzleContainer.children);
+
+                // Fisher-Yates (Knuth) shuffle algorithm
+                for (let i = piecesArray.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [piecesArray[i], piecesArray[j]] = [piecesArray[j], piecesArray[i]]; // Swap elements
+                }
+
+                // Clear container and append shuffled pieces
+                puzzleContainer.innerHTML = '';
+                piecesArray.forEach(piece => puzzleContainer.appendChild(piece));
+
+                console.log('Pieces shuffled'); // Debug log
+            }
+
+            // Function to add drag and drop event listeners to all pieces
+            function addEventListenersToPieces() {
+                const currentPieces = Array.from(puzzleContainer.children);
+                currentPieces.forEach(piece => {
+                    piece.addEventListener('dragstart', handleDragStart);
+                    piece.addEventListener('dragover', handleDragOver);
+                    piece.addEventListener('drop', handleDrop);
+                    piece.addEventListener('dragend', handleDragEnd);
+                });
+                console.log('Event listeners added to all pieces'); // Debug log
+            }
+
+            // Event handler for when a drag operation starts
+            function handleDragStart(e) {
+                currentDraggedPiece = e.target;
+                e.target.classList.add('dragging'); // Add dragging class for styling
+                // Set dataTransfer for drag operation (required for Firefox)
+                e.dataTransfer.setData('text/plain', e.target.dataset.originalIndex);
+            }
+
+            // Event handler for when a dragged element is over a valid drop target
+            function handleDragOver(e) {
+                e.preventDefault(); // Prevent default to allow drop
+            }
+
+            // Event handler for when a dragged element is dropped on a target
+            function handleDrop(e) {
+                e.preventDefault();
+                const targetPiece = e.target.closest('.puzzle-piece'); // Ensure we get the piece element
+
+                if (currentDraggedPiece && targetPiece && currentDraggedPiece !== targetPiece) {
+                    // Get the current positions of the dragged and target pieces
+                    const draggedIndex = Array.from(puzzleContainer.children).indexOf(currentDraggedPiece);
+                    const targetIndex = Array.from(puzzleContainer.children).indexOf(targetPiece);
+
+                    // Swap the pieces in the DOM
+                    if (draggedIndex < targetIndex) {
+                        puzzleContainer.insertBefore(targetPiece, currentDraggedPiece);
+                        puzzleContainer.insertBefore(currentDraggedPiece, puzzleContainer.children[targetIndex]);
+                    } else {
+                        puzzleContainer.insertBefore(currentDraggedPiece, targetPiece);
+                        puzzleContainer.insertBefore(targetPiece, puzzleContainer.children[draggedIndex]);
+                    }
+
+                    checkWinCondition();
+                }
+            }
+
+            // Event handler for when a drag operation ends
+            function handleDragEnd(e) {
+                e.target.classList.remove('dragging'); // Remove dragging class
+                currentDraggedPiece = null;
+            }
+
+            // Function to check if the puzzle is solved
+            function checkWinCondition() {
+                let solved = true;
+                const currentOrder = Array.from(puzzleContainer.children); // Get current order of pieces
+
+                currentOrder.forEach((piece, index) => {
+                    // Check if the piece's current position matches its original index
+                    if (parseInt(piece.dataset.originalIndex) !== index) {
+                        solved = false;
+                        piece.classList.remove('correct'); // Remove correct class if out of place
+                    } else {
+                        piece.classList.add('correct'); // Add correct class if in place
+                    }
+                });
+
+                if (solved) {
+                    showMessage("Congratulations! You solved the puzzle!", false); // Show win message
+                }
+            }
+
+            // Event listener for the reset button
+            resetButton.addEventListener('click', generateImage); // Call generateImage on reset
+
+            // Generate the image and then initialize the puzzle when the window loads
+            window.onload = function () {
+                generateImage(); // Call generateImage first
+            };
+        });
+    </script>
+</body>
+
+</html>
